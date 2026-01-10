@@ -73,7 +73,7 @@ async function fetchAllData() {
                     avatar_url: snoovatarUrl ?? 'https://www.redditstatic.com/avatars/avatar_default_02_FF4500.png'
                 };
             }
-            console.log(`[Server] User Resolved: ${user.username} (${user.id}) - Avatar: ${user.avatar_url ? 'Yes' : 'No'}`);
+            console.log(\`[Server] User Resolved: \${user.username} (\${user.id}) - Avatar: \${user.avatar_url ? 'Yes' : 'No'}\`);
         } catch(e) { 
             console.warn('[Server] User fetch failed:', e.message); 
         }
@@ -156,17 +156,17 @@ router.post('/api/realtime/message', async (req, res) => {
 // --- Avatar Lookup Route (Client Injection) ---
 router.get('/api/lookup/avatar/:username', async (req, res) => {
     const { username } = req.params;
-    console.log(`[Server] Avatar Lookup for: ${username}`);
+    console.log(\`[Server] Avatar Lookup for: \${username}\`);
     try {
         const user = await reddit.getUserByUsername(username);
         let url = null;
         if (user) {
             url = await user.getSnoovatarUrl();
         }
-        console.log(`[Server] Found URL for ${username}: ${url ? 'Yes' : 'No'}`);
+        console.log(\`[Server] Found URL for \${username}: \${url ? 'Yes' : 'No'}\`);
         res.json({ url: url || 'https://www.redditstatic.com/avatars/avatar_default_02_FF4500.png' });
     } catch (e) {
-        console.warn(`[Server] Avatar Lookup failed for ${username}: ${e.message}`);
+        console.warn(\`[Server] Avatar Lookup failed for \${username}: \${e.message}\`);
         res.json({ url: 'https://www.redditstatic.com/avatars/avatar_default_02_FF4500.png' });
     }
 });

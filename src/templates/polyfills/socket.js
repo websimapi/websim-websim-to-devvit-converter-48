@@ -279,7 +279,7 @@ export const websimSocketPolyfill = `
             const user = window._currentUser || { username: 'Guest', avatar_url: '' };
             const avatar = sanitizeAvatar(user.avatar_url, user.username);
             
-            console.log(`[WebSim] Announcing join as: ${user.username} (ID: ${this.clientId})`);
+            console.log(\`[WebSim] Announcing join as: \${user.username} (ID: \${this.clientId})\`);
 
             this.peers[this.clientId] = {
                 id: this.clientId,
