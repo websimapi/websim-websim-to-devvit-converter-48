@@ -29,8 +29,8 @@ export const websimStubsJs = `
                 return window.websimSocketInstance ? window.websimSocketInstance.collection(name) : {
                     subscribe: () => {}, 
                     getList: () => [], 
-                    create: async () => {}, 
-                    update: async () => {}, 
+                    create: async (d) => ({ id: 'stub-'+Math.random().toString(36).substr(2,9), ...d }), 
+                    update: async (id, d) => ({ id, ...d }), 
                     delete: async () => {}, 
                     filter: () => ({ subscribe: () => {}, getList: () => [] })
                 };

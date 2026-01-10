@@ -192,7 +192,7 @@ export const websimSocketPolyfill = `
             if (msg.message) data = msg.message;
             else if (msg.data && !msg.type) data = msg.data; // Careful not to unwrap our own { type, data } payload prematurely
 
-            console.log("[WebSim] RT Recv:", JSON.stringify(data).substring(0, 100));
+            console.log("[WebSim] RT Recv:", JSON.stringify(data));
 
             const type = data.type;
 
@@ -346,8 +346,11 @@ export const websimSocketPolyfill = `
         init: async () => {
             console.log("[Bridge] Initializing DB & User Identity...");
             try {
-                const data = await fetch('/api/init').then(r => r.json());
-                console.log("[Bridge] Received Init Data. User:", data.user?.username);
+                const response = await fetch('/api/init');
+                if (!response.ok) throw new Error(`Init failed: ${response.status}`);
+                const data = await response.json();
+                console.log("[Bridge] Received Init Data. Keys:", Object.keys(data));
+                console.log("[Bridge] User:", data.user?.username);
                 
                 if (data.dbData) {
                     window._genericDB = data.dbData;
@@ -377,42 +380,72 @@ export const websimSocketPolyfill = `
 
     window.GenericDB = {
         save: async (col, key, val) => {
-            if (!window._genericDB[col]) window._genericDB[col] = {};
-            window._genericDB[col][key] = val;
-            DevvitBridge.notifySubscribers(col);
-            fetch('/api/save', { method:'POST', body:JSON.stringify({collection:col, key, value:val})}).catch(console.error);
+            console.log(`[DB] Saving to ${col}:${key}`, val);
+            try {
+                if (!window._genericDB[col]) window._genericDB[col] = {};
+                window._genericDB[col][key] = val;
+                DevvitBridge.notifySubscribers(col);
+                
+                fetch('/api/save', { 
+                    method:'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body:JSON.stringify({collection:col, key, value:val})
+                })
+                .then(r => {
+                    if(!r.ok) console.error(`[DB] Server Save Failed ${r.status}`);
+                })
+                .catch(e => console.error("[DB] Save Network Error:", e));
+
+            } catch(e) {
+                console.error("[DB] Save Sync Error:", e);
+            }
         },
         get: (col, key) => window._genericDB[col]?.[key],
-        getList: (col) => Object.values(window._genericDB[col] || {}),
+        getList: (col) => {
+            const list = Object.values(window._genericDB[col] || {});
+            console.log(`[DB] getList(${col}) -> ${list.length} items`);
+            return list;
+        },
         delete: async (col, key) => {
+            console.log(`[DB] Deleting ${col}:${key}`);
             if (window._genericDB[col]) delete window._genericDB[col][key];
             DevvitBridge.notifySubscribers(col);
-            fetch('/api/delete', { method:'POST', body:JSON.stringify({collection:col, key})}).catch(console.error);
+            fetch('/api/delete', { method:'POST', body:JSON.stringify({collection:col, key})}).catch(e => console.error("[DB] Delete Error:", e));
         },
         subscribe: (col, cb) => {
+            console.log(`[DB] Subscribing to ${col}`);
             if (!window._subscribers[col]) window._subscribers[col] = [];
             window._subscribers[col].push(cb);
-            cb(window.GenericDB.getList(col));
+            try { cb(window.GenericDB.getList(col)); } catch(e) { console.error("[DB] Subscribe Callback Error:", e); }
             return () => window._subscribers[col] = window._subscribers[col].filter(f => f !== cb);
         },
         getAdapter: (name) => ({
              getList: () => window.GenericDB.getList(name),
              create: (d) => {
+                 console.log(`[DB] Adapter(${name}).create called`);
                  const id = Math.random().toString(36).substr(2,10);
                  const r = { id, ...d, created_at: new Date().toISOString() };
-                 if(window._currentUser) { r.username = window._currentUser.username; r.avatar_url = window._currentUser.avatar_url; }
+                 if(window._currentUser) { 
+                     r.username = window._currentUser.username; 
+                     r.avatar_url = window._currentUser.avatar_url; 
+                 }
                  window.GenericDB.save(name, id, r);
                  return Promise.resolve(r);
              },
              update: (id, d) => {
+                 console.log(`[DB] Adapter(${name}).update called for ${id}`);
                  const curr = window.GenericDB.get(name, id) || {};
                  const r = { ...curr, ...d };
                  window.GenericDB.save(name, id, r);
                  return Promise.resolve(r);
              },
-             delete: (id) => window.GenericDB.delete(name, id),
+             delete: (id) => {
+                 console.log(`[DB] Adapter(${name}).delete called for ${id}`);
+                 window.GenericDB.delete(name, id);
+                 return Promise.resolve();
+             },
              subscribe: (cb) => window.GenericDB.subscribe(name, cb),
-             filter: () => ({ subscribe:()=>{}, getList:()=>[] }) // simplified
+             filter: () => ({ subscribe:(cb) => { console.log(`[DB] Adapter(${name}).filter (stub)`); return ()=>{}; }, getList:()=>[] }) 
         })
     };
 
