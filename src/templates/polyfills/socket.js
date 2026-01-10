@@ -279,7 +279,7 @@ export const websimSocketPolyfill = `
             const user = window._currentUser || { username: 'Guest', avatar_url: '' };
             const avatar = sanitizeAvatar(user.avatar_url, user.username);
             
-            console.log(\`[WebSim] Announcing join as: \${user.username} (ID: \${this.clientId})\`);
+            console.log("[WebSim] Announcing join as: " + user.username + " (ID: " + this.clientId + ")");
 
             this.peers[this.clientId] = {
                 id: this.clientId,
@@ -347,7 +347,7 @@ export const websimSocketPolyfill = `
             console.log("[Bridge] Initializing DB & User Identity...");
             try {
                 const response = await fetch('/api/init');
-                if (!response.ok) throw new Error(`Init failed: ${response.status}`);
+                if (!response.ok) throw new Error("Init failed: " + response.status);
                 const data = await response.json();
                 console.log("[Bridge] Received Init Data. Keys:", Object.keys(data));
                 console.log("[Bridge] User:", data.user?.username);
